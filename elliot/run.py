@@ -35,8 +35,8 @@ print(u'''
          \\///////////////   \\/////////   \\/////////   \\///      \\/////          \\/////    
          ''')
 
-def run_experiment(config_path: str = '', **kwargs):
-    builder = NameSpaceBuilder(config_path, here, path.abspath(path.dirname(config_path)), **kwargs)
+def run_experiment(config_path: str = ''):
+    builder = NameSpaceBuilder(config_path, here, path.abspath(path.dirname(config_path)))
     base = builder.base
     config_test(builder, base)
     logging_project.init(base.base_namespace.path_logger_config, base.base_namespace.path_log_folder)
@@ -58,11 +58,9 @@ def run_experiment(config_path: str = '', **kwargs):
     dataloader_class = getattr(importlib.import_module("elliot.dataset"), base.base_namespace.data_config.dataloader)
     dataloader = dataloader_class(config=base.base_namespace)
     data_test_list = dataloader.generate_dataobjects()
-    all_trials = {}
     for key, model_base in builder.models():
         test_results = []
         test_trials = []
-        all_trials[key] = []
         for test_fold_index, data_test in enumerate(data_test_list):
             logging_project.prepare_logger(key, base.base_namespace.path_log_folder)
             if key.startswith("external."):
@@ -100,7 +98,6 @@ def run_experiment(config_path: str = '', **kwargs):
                 # aggiunta a lista performance test
                 test_results.append(trials._trials[min_val]["result"])
                 test_trials.append(trials)
-                all_trials[key].append([el["result"] for el in trials._trials])
                 logger.info(f"Tuning ended for {model_class.__name__}")
             else:
                 logger.info(f"Training begun for {model_class.__name__}\n")
@@ -114,8 +111,6 @@ def run_experiment(config_path: str = '', **kwargs):
 
                 # aggiunta a lista performance test
                 test_results.append(single)
-                test_trials.append(single)
-                all_trials[key].append([single])
                 logger.info(f"Training ended for {model_class.__name__}")
 
             logger.info(f"Loss:\t{best_model_loss}")
@@ -142,7 +137,6 @@ def run_experiment(config_path: str = '', **kwargs):
 
         if isinstance(model_base, tuple):
             hyper_handler.add_trials(test_trials[min_val])
-        all_trials[key] = all_trials[key][min_val]
 
     # res_handler.save_results(output=base.base_namespace.path_output_rec_performance)
     hyper_handler.save_trials(output=base.base_namespace.path_output_rec_performance)
@@ -172,16 +166,6 @@ def run_experiment(config_path: str = '', **kwargs):
                                                   output=base.base_namespace.path_output_rec_performance)
 
     logger.info("End experiment")
-    # TODO: check before to push only this feature!
-    # logger.info("Start Post-Hoc scripts")
-
-    # spec = importlib.util.spec_from_file_location("post_hoc", path.relpath(base.base_namespace.external_posthoc_path))
-    # post_hoc = importlib.util.module_from_spec(spec)
-    # sys.modules[spec.name] = post_hoc
-    # spec.loader.exec_module(post_hoc)
-    # post_hoc.run(data_test_list, all_trials)
-
-    # logger.info("End Post-Hoc scripts")
 
 
 def _reset_verbose_option(model):

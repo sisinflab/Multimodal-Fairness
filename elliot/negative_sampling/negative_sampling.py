@@ -1,4 +1,5 @@
 import pandas as pd
+from operator import itemgetter
 from types import SimpleNamespace
 import typing as t
 from scipy import sparse as sp
@@ -23,22 +24,35 @@ class NegativeSampler:
     @staticmethod
     def sample(ns: SimpleNamespace, public_users: t.Dict, public_items: t.Dict, private_users: t.Dict,
                private_items: t.Dict, i_train: sp.csr_matrix,
-               val: t.Dict = None, test: t.Dict = None) -> t.Tuple[sp.csr_matrix, sp.csr_matrix]:
+               val: t.Dict = None, test: t.Dict = None):
 
-        val_negative_items = NegativeSampler.process_sampling(ns, public_users, public_items, private_users,
+        val_negative_items, val_negative_items_set = NegativeSampler.process_sampling(ns, public_users, public_items, private_users,
                                                               private_items, i_train,
-                                                              test, validation=True) if val != None else None
+                                                              test, validation=True) if val != None else (None, None)
 
-        test_negative_items = NegativeSampler.process_sampling(ns, public_users, public_items, private_users,
+        test_negative_items, test_negative_items_set = NegativeSampler.process_sampling(ns, public_users, public_items, private_users,
                                                               private_items, i_train,
-                                                               test) if test != None else None
+                                                               test) if test != None else (None, None)
 
-        return (val_negative_items, test_negative_items) if val_negative_items else (test_negative_items, test_negative_items)
+        if val_negative_items_set and test_negative_items_set:
+            selected_items = val_negative_items_set.union(test_negative_items_set)
+
+        elif val_negative_items_set:
+            selected_items = val_negative_items_set
+
+        elif test_negative_items_set:
+            selected_items = test_negative_items_set
+
+        else:
+            selected_items = None
+
+        return (val_negative_items, test_negative_items, selected_items) if val_negative_items else (test_negative_items, test_negative_items, selected_items)
 
     @staticmethod
     def process_sampling(ns: SimpleNamespace, public_users: t.Dict, public_items: t.Dict, private_users: t.Dict,
                          private_items: t.Dict, i_train: sp.csr_matrix,
                          test: t.Dict, validation=False) -> sp.csr_matrix:
+
         i_test = [(public_users[user], public_items[i])
                   for user, items in test.items() if user in public_users.keys()
                   for i in items.keys() if i in public_items.keys()]
@@ -47,7 +61,8 @@ class NegativeSampler:
         i_test = sp.csr_matrix((np.ones_like(rows), (rows, cols)), dtype='float32',
                                shape=(len(public_users.keys()), len(public_items.keys())))
 
-        candidate_negatives = ((i_test + i_train).astype('bool') != True)
+        # quando è fixed questo non viene usato
+        # candidate_negatives = ((i_test + i_train).astype('bool') != True)
         ns = ns.negative_sampling
 
         strategy = getattr(ns, "strategy", None)
@@ -103,22 +118,20 @@ class NegativeSampler:
         return negative_samples
 
     @staticmethod
-    def read_from_files(public_users: t.Dict, public_items: t.Dict, filepath: str) -> sp.csr_matrix:
+    def read_from_files(public_users: t.Dict, public_items: t.Dict, filepath: str):
 
-        map_ = {}
-        with open(filepath) as file:
-            for line in file:
-                line = line.rstrip("\n").split('\t')
-                int_set = {public_items[int(i)] for i in line[1:] if int(i) in public_items.keys()}
-                map_[public_users[int(make_tuple(line[0])[0])]] = int_set
+        def map_to_public(row):
+            user = public_users[int(make_tuple(row[0])[0])]
+            int_set = set(list(itemgetter(*row[1:])(public_items)))
+            return user, [public_items[int(make_tuple(row[0])[1])]] + list(int_set)
 
-        rows_cols = [(u, i) for u, items in map_.items() for i in items]
-        rows, cols = zip(*rows_cols)
-        # rows = [u for u, _ in rows_cols]
-        # cols = [i for _, i in rows_cols]
-        negative_samples = sp.csr_matrix((np.ones_like(rows), (rows, cols)), dtype='bool',
-                             shape=(len(public_users), len(public_items)))
-        return negative_samples
+        df = pd.read_csv(filepath, sep='\t', header=None)
+        print(f'''Mapping for {'validation' if 'validation' in filepath else 'test'} has started...''')
+        df = df.apply(lambda x: pd.Series([*map_to_public(x)]), axis=1)
+        df.columns = ['user', 'negative_items']
+        print(f'''Mapping for {'validation' if 'validation' in filepath else 'test'} is complete...''')
+        selected_items = set(np.array(df['negative_items'].tolist()).reshape(-1).tolist())
+        return df.set_index('user').to_dict()['negative_items'], selected_items
 
     @staticmethod
     def build_sparse(map_ : t.Dict, nusers: int, nitems: int):

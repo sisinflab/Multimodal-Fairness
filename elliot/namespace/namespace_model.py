@@ -53,7 +53,6 @@ _models = 'models'
 _recommender = 'recommender'
 _gpu = 'gpu'
 _external_models_path = 'external_models_path'
-_external_posthoc_path = 'external_posthoc_path'
 _hyper_max_evals = 'hyper_max_evals'
 _hyper_opt_alg = 'hyper_opt_alg'
 _data_paths = 'data_paths'
@@ -64,20 +63,14 @@ _backend = 'backend'
 
 
 class NameSpaceModel:
-    def __init__(self, config_path, base_folder_path_elliot, base_folder_path_config, **kwargs):
+    def __init__(self, config_path, base_folder_path_elliot, base_folder_path_config):
         self.base_namespace = SimpleNamespace()
 
         self._base_folder_path_elliot = base_folder_path_elliot
         self._base_folder_path_config = base_folder_path_config
 
-        if not kwargs["config_already_loaded"]:
-            self.config_file = open(config_path)
-            self.config = load(self.config_file, Loader=FullLoader)
-        else:
-            self.config = kwargs["config"]
-
-        self.config['experiment']['gpu'] = kwargs["gpu"]
-        self.config['experiment']['dataset'] = kwargs["dataset"]
+        self.config_file = open(config_path)
+        self.config = load(self.config_file, Loader=FullLoader)
 
         os.environ['CUDA_VISIBLE_DEVICES'] = str(self.config[_experiment].get(_gpu, -1))
 
@@ -134,7 +127,7 @@ class NameSpaceModel:
                            self.config[_experiment][_performance])
 
         for p in [_data_config, _weights, _recs, _dataset, _top_k, _performance, _logger_config,
-                  _log_folder, _dataloader, _splitting, _prefiltering, _evaluation, _external_models_path, _external_posthoc_path,
+                  _log_folder, _dataloader, _splitting, _prefiltering, _evaluation, _external_models_path,
                   _print_triplets, _config_test, _negative_sampling, _binarize, _random_seed, _align_side_with_train,
                   _version, _backend]:
             if p == _data_config:
@@ -234,9 +227,6 @@ class NameSpaceModel:
 
                 # setattr(self.base_namespace, p, f"{self._base_folder_path_elliot}/../log/")
             elif p == _external_models_path and self.config[_experiment].get(p, False):
-                self.config[_experiment][p] = self._safe_set_path(self._base_folder_path_config, self.config[_experiment][p], "")
-                setattr(self.base_namespace, p, self.config[_experiment][p])
-            elif p == _external_posthoc_path and self.config[_experiment].get(p, False):
                 self.config[_experiment][p] = self._safe_set_path(self._base_folder_path_config, self.config[_experiment][p], "")
                 setattr(self.base_namespace, p, self.config[_experiment][p])
             elif p == _config_test:
