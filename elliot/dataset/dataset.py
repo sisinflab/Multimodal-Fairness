@@ -230,31 +230,26 @@ class DataSet(AbstractDataset):
         if len(data_tuple) == 2:
             self.test_dict = self.build_dict(data_tuple[1], self.users)
             if hasattr(config, "negative_sampling"):
-                _, test_neg_samples, selected_items = NegativeSampler.sample(config, self.public_users, self.public_items,
-                                                                             self.private_users, self.private_items,
-                                                                             self.sp_i_train, None, self.test_dict)
-                # sp_i_test = self.to_bool_sparse(self.test_dict)
-                # test_candidate_items = test_neg_samples + sp_i_test
-                # self.test_mask = np.where((test_candidate_items.toarray() == True), True, False)
-                self.test_negative_dict = test_neg_samples
-                self.selected_items = selected_items
+                val_neg_samples, test_neg_samples = NegativeSampler.sample(config, self.public_users, self.public_items,
+                                                                           self.private_users, self.private_items,
+                                                                           self.sp_i_train, None, self.test_dict)
+                sp_i_test = self.to_bool_sparse(self.test_dict)
+                test_candidate_items = test_neg_samples + sp_i_test
+                self.test_mask = np.where((test_candidate_items.toarray() == True), True, False)
         else:
             self.val_dict = self.build_dict(data_tuple[1], self.users)
             self.test_dict = self.build_dict(data_tuple[2], self.users)
             if hasattr(config, "negative_sampling"):
-                val_neg_samples, test_neg_samples, selected_items = NegativeSampler.sample(config, self.public_users, self.public_items,
-                                                                                           self.private_users, self.private_items,
-                                                                                           self.sp_i_train, self.val_dict,
-                                                                                           self.test_dict)
-                # sp_i_val = self.to_bool_sparse(self.val_dict)
-                # sp_i_test = self.to_bool_sparse(self.test_dict)
-                # val_candidate_items = val_neg_samples + sp_i_val
-                # self.val_mask = np.where((val_candidate_items.toarray() == True), True, False)
-                # test_candidate_items = test_neg_samples + sp_i_test
-                # self.test_mask = np.where((test_candidate_items.toarray() == True), True, False)
-                self.val_negative_dict = val_neg_samples
-                self.test_negative_dict = test_neg_samples
-                self.selected_items = selected_items
+                val_neg_samples, test_neg_samples = NegativeSampler.sample(config, self.public_users, self.public_items,
+                                                                           self.private_users, self.private_items,
+                                                                           self.sp_i_train, self.val_dict,
+                                                                           self.test_dict)
+                sp_i_val = self.to_bool_sparse(self.val_dict)
+                sp_i_test = self.to_bool_sparse(self.test_dict)
+                val_candidate_items = val_neg_samples + sp_i_val
+                self.val_mask = np.where((val_candidate_items.toarray() == True), True, False)
+                test_candidate_items = test_neg_samples + sp_i_test
+                self.test_mask = np.where((test_candidate_items.toarray() == True), True, False)
 
         self.allunrated_mask = np.where((self.sp_i_train.toarray() == 0), True, False)
 

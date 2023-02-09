@@ -33,6 +33,8 @@ from . import metrics
 from . import popularity_utils
 from . import relevance
 
+from sklearn.metrics import mean_squared_error
+
 
 class Evaluator(object):
     def __init__(self, data: ds.DataSet, params: SimpleNamespace):
@@ -89,6 +91,28 @@ class Evaluator(object):
                                 "test_results": test_results,
                                 "test_statistical_results": test_statistical_results}
             result_dict[k] = local_result_dict
+        return result_dict
+
+    def eval_error(self, val_pred, val_true, test_pred, test_true):
+        """
+        Runtime Evaluation of Error-based Performance
+        :return:
+        """
+        val_results = mean_squared_error(val_true, val_pred)
+        test_results = mean_squared_error(test_true, test_pred)
+
+        self.logger.info("")
+        self.logger.info(f"Validation Evaluation results")
+        self.logger.info(f"Results")
+        self.logger.info(f"MSE: {val_results:.4f}")
+        self.logger.info(f"Test Evaluation results")
+        self.logger.info(f"Results")
+        self.logger.info(f"MSE: {test_results:.4f}")
+
+        result_dict = {0: {"val_results": {'MSE': val_results},
+                           "val_statistical_results": [],
+                           "test_results": {'MSE': test_results},
+                           "test_statistical_results": []}}
         return result_dict
 
     def eval_at_k(self, recommendations, k):

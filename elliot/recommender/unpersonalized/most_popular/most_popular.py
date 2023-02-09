@@ -60,3 +60,4 @@ class MostPop(RecMixin, BaseRecommenderModel):
                     break
             r[self._data.private_users[u]] = l
         return r
+
