@@ -103,7 +103,7 @@ experiment:
       l_m: 0.7
       factors_multimod: 64
       modalities: ('visual','textual')
-      loaders: ('VisualAttribue','TextualAttribute')
+      loaders: ('VisualAttribute','TextualAttribute')
       seed: 123
     external.MGAT:
       meta:
