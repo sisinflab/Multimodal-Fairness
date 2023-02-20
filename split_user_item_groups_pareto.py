@@ -8,7 +8,7 @@ args = parser.parse_args()
 
 dataset = args.dataset
 
-train = pd.read_csv(f'data/{dataset}/train.tsv', sep='\t', header=None)
+train = pd.read_csv(f'data/{dataset}/train.txt', sep='\t', header=None)
 train_80 = round(len(train) * 0.8)
 user_count = train.groupby(0).size().reset_index(name='counts').sort_values(by='counts',
                                                                             ascending=True).reset_index(drop=True)
