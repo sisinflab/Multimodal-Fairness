@@ -65,7 +65,7 @@ config = """experiment:
       folder: ./results/dataset_name/recs/
 """
 
-datasets = ['beauty', 'clothing', 'sports', 'toys', 'office']
+datasets = ['sports', 'toys', 'office']
 
 for d in datasets:
     with open(f'./config_files/{d}_results.yml', 'w') as f:
